@@ -3,6 +3,7 @@
 #import "MendixNative.h"
 #import "IQKeyboardManager/IQKeyboardManager.h"
 #import "SplashScreenPresenter.h"
+#import "React/RCTLinkingManager.h"
 
 @implementation AppDelegate
 
@@ -53,6 +54,7 @@ fetchCompletionHandler:(nonnull void (^)(UIBackgroundFetchResult))completionHand
 }
 
 - (BOOL) application:(UIApplication *)app openURL:(NSURL *)url options:(NSDictionary<UIApplicationOpenURLOptionsKey,id> *)options {
+  [RCTLinkingManager application:app openURL:url options:options];
 	return [MendixAppDelegate application:app openURL:url options:options];
 }
 

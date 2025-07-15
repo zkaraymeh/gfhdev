@@ -70,5 +70,8 @@ allprojects {
         maven {
             url "https://cdn.veriff.me/android/"
         }
+        maven {
+            url "https://maven.google.com"
+        }
     }
 }

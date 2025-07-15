@@ -7,6 +7,19 @@
 		<string>mailto</string>
 		<string>tel</string>
 	</array>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>gfhinvestment</string>
+			</array>
+			<key>CFBundleURLName</key>
+			<string>myapp.gfhinvestment.qa</string>
+		</dict>
+	</array>
+	<key>NSUserTrackingUsageDescription</key>
+	<string>This identifier will be used to deliver personalized ads and improve your experience.</string>
 	<key>CFBundleDevelopmentRegion</key>
 	<string>en</string>
 	<key>CFBundleDisplayName</key>
