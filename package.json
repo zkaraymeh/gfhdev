@@ -7,7 +7,6 @@
     "configure": "native-mobile-toolkit configure --config-path='./config.json' --verbose"
   },
   "dependencies": {
-    "@dynatrace/react-native-plugin": "^2.313.1",
     "@expo/config-plugins": "5.0.4",
     "@mendix/native": "3.0.8",
     "@mendix/react-native-sqlite-storage": "5.1.3",
