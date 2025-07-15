@@ -1,0 +1,32 @@
+name: Update Releases List
+
+on:
+  workflow_dispatch:
+
+env:
+  OUTPUT_PATH: ./.mx/releases_list.json
+
+jobs:
+  releases:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Fetch & Generate Releases List
+        uses: actions/github-script@v3
+        with:
+          script: |
+            const script = require(`${process.env.GITHUB_WORKSPACE}/.github/update_releases_list.js`);
+            await script({github});
+
+      - name: Create Pull Request
+        uses: peter-evans/create-pull-request@v3
+        with:
+          commit-message: '[BUILD] Update Release List'
+          committer: github-action <41898282+github-actions[bot]@users.noreply.github.com>
+          author: github-action <41898282+github-actions[bot]@users.noreply.github.com>
+          delete-branch: true
+          title: '[BUILD] Update Release List'
+          body: ''
+          branch: update-releases-list
+          branch-suffix: short-commit-hash

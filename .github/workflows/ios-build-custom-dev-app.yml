@@ -1,0 +1,58 @@
+name: '[iOS] Custom Dev App CI'
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 0 * * *'
+  pull_request:
+    branches: [master, release/*]
+
+jobs:
+  build:
+    runs-on: macos-latest
+
+    steps:
+      - uses: actions/checkout@v2
+      - name: switch XCode to 15.4
+        run: | 
+          sudo xcode-select -s /Applications/Xcode_15.4.app
+
+      - name: actions/setup-node
+        uses: actions/setup-node@v3
+        with:
+          node-version-file: .nvmrc
+          cache: 'npm'
+
+      - name: npm install
+        run: npm ci
+
+      - name: cache cocoapods
+        uses: actions/cache@v3
+        with:
+          path: ios/Pods
+          key: ${{ runner.os }}-pods-${{ hashFiles('**/Podfile.lock') }}
+
+      - name: pod install
+        run: pod install
+        working-directory: ./ios
+
+      - name: appcenter prebuilt script test
+        shell: bash
+        working-directory: ./
+        run: |
+          chmod +x ./appcenter-pre-build.sh
+          APPCENTER_XCODE_SCHEME="nativeTemplate" APPCENTER_SOURCE_DIRECTORY="./" IS_DEV_APP=False ./appcenter-pre-build.sh
+
+      - name: iOS Build Action
+        uses: yukiarrr/ios-build-action@v1.5.0
+        with:
+          project-path: ./ios/nativetemplate.xcodeproj
+          p12-base64: ${{ secrets.IOS_DUMMY_P12 }}
+          mobileprovision-base64: ${{ secrets.IOS_DUMMY_PROVISION }}
+          code-signing-identity: ${{ secrets.IOS_CODE_SIGNING_IDENTITY }}
+          team-id: ${{ secrets.IOS_TEAM_ID }}
+          workspace-path: ./ios/nativetemplate.xcworkspace
+          export-method: development
+          configuration: Debug
+          certificate-password: ${{ secrets.IOS_DUMMY_P12_PASSWORD }}
+          scheme: Dev

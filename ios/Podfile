@@ -1,0 +1,145 @@
+source 'https://cdn.cocoapods.org/'
+
+# Resolve react_native_pods.rb with node to allow for hoisting
+require Pod::Executable.execute_command('node', ['-p',
+  'require.resolve(
+    "react-native/scripts/react_native_pods.rb",
+    {paths: [process.argv[1]]},
+  )', __dir__]).strip
+
+require_relative './mendix_utils'
+
+deployment_target = min_ios_version_supported
+platform :ios, deployment_target
+
+prepare_react_native_project!
+generate_mendix_delegate
+
+linkage = ENV['USE_FRAMEWORKS']
+if linkage != nil
+  Pod::UI.puts "Configuring Pod with #{linkage}ally linked Frameworks".green
+  use_frameworks! :linkage => linkage.to_sym
+end
+
+def patch_flipper_xcode_15_3
+  file_path = 'Pods/Flipper/xplat/Flipper/FlipperTransportTypes.h'
+  contents = File.read(file_path)
+  unless contents.include?('#include <functional>')
+    File.open(file_path, 'w') do |file|
+      file.puts('#include <functional>')
+      file.puts(contents)
+    end
+  end
+end
+
+def common_pods
+  # Comment the next line if you don't want to use dynamic frameworks
+  # use_frameworks!
+
+  # RN development pods
+  config = use_native_modules!
+  use_react_native!(
+    :path => config[:reactNativePath],
+    # Hermes is disabled by default to avoid incompatibilities and slowness with Mendix Runtime.
+    :hermes_enabled => false,
+    :fabric_enabled => false,
+    # Enables Flipper.
+    #
+    # Note that if you have use_frameworks! enabled, Flipper will not work and
+    # you should disable the next line.
+    :flipper_configuration => FlipperConfiguration.enabled(["Debug"], {'Flipper' => '0.189.0' , 'Flipper-DoubleConversion' => '1.1.7'}),
+    # An absolute path to your application root.
+    :app_path => "#{Pod::Config.instance.installation_root}/.."
+  )
+  # RN pods end
+
+  # Manually linked dependencies
+  pod 'react-native-splash-screen', :path => '../node_modules/react-native-splash-screen'
+
+  # Third party dependencies of dependencies
+  pod 'IQKeyboardManager'
+
+  # At least one permission must be added when `react-native-permissions` used
+  permissions_path = '../node_modules/react-native-permissions/ios'
+  pod 'Permission-Camera', :path => "#{permissions_path}/Camera"
+  pod 'Permission-PhotoLibrary', :path => "#{permissions_path}/PhotoLibrary"
+  pod 'Permission-Microphone', :path => "#{permissions_path}/Microphone"
+  # The pods listed in this section are essential for the application to function correctly.
+  # These pods are added by Native Builder UI (NBUI) and should not be modified under any circumstances.
+  # Do not make any changes to the pods in this section.
+  # REQUIRED PODS START
+
+  # Required MendixNative dependency
+  pod 'SSZipArchive'
+
+  pod 'Firebase', :modular_headers => true
+  pod 'FirebaseCore', :modular_headers => true
+  pod 'GoogleUtilities', :modular_headers => true
+
+  # REQUIRED PODS END
+end
+
+target 'nativeTemplate' do
+  generate_pod_dependencies
+  use_native_modules!
+  common_pods
+  # Intentionally left empty
+end
+
+target 'dev' do
+  generate_pod_dependencies
+  use_native_modules!
+  common_pods
+  # Intentionally left empty
+end
+
+post_install do |installer|
+  config = use_native_modules!
+  react_native_post_install(
+    installer,
+    config[:reactNativePath],
+    :mac_catalyst_enabled => false
+  )
+
+  __apply_Xcode_12_5_M1_post_install_workaround(installer)
+
+  installer.pods_project.build_configurations.each do |config|
+    config.build_settings['ENABLE_BITCODE'] = 'YES'
+    config.build_settings['OTHER_LDFLAGS'] ||= ['$(inherited)']
+    if config.name == "Debug"
+      config.build_settings['DEAD_CODE_STRIPPING'] = 'YES'
+      config.build_settings['OTHER_LDFLAGS'] << "-fembed-bitcode-marker"
+      config.build_settings['BITCODE_GENERATION_MODE'] = "marker"
+    else
+      config.build_settings['OTHER_LDFLAGS'] << "-fembed-bitcode"
+      config.build_settings['BITCODE_GENERATION_MODE'] = "bitcode"
+    end
+  end
+
+  installer.pods_project.targets.each do |target|
+    if target.name == 'Flipper'
+      patch_flipper_xcode_15_3
+    end
+
+    target.build_configurations.each do |config|
+      if target.name == "React"
+        if config.name == "ReleaseDevApp"
+          config.build_settings['GCC_PREPROCESSOR_DEFINITIONS'] ||= ['$(inherited)']
+          config.build_settings['GCC_PREPROCESSOR_DEFINITIONS'] << "DEBUG=1"
+        end
+      end
+      config.build_settings['GCC_PREPROCESSOR_DEFINITIONS'] ||= ['$(inherited)', '_LIBCPP_ENABLE_CXX17_REMOVED_UNARY_BINARY_FUNCTION']
+    end
+  end
+  # Ensure deployment_target is set correctly for all projects
+  installer.generated_projects.each do |project|
+      project.targets.each do |target|
+          target.build_configurations.each do |config|
+              config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = deployment_target
+          end
+      end
+      project.build_configurations.each do |bc|
+          bc.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = deployment_target
+      end
+  end
+end
