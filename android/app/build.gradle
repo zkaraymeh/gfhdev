@@ -76,8 +76,8 @@ android {
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         missingDimensionStrategy "react-native-camera", "general"
-        versionCode 1
-        versionName "1.0"
+        versionCode 10
+        versionName "0.0.10"
         testBuildType System.getProperty("testBuildType", "debug")
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         resValue "string", "CODE_PUSH_APK_BUILD_TIME", String.format("\"%d\"", System.currentTimeMillis())
@@ -90,7 +90,7 @@ android {
         dev {
             dimension "mode"
             applicationIdSuffix ".developerapp"
-            versionNameSuffix "-developerApp"
+        versionName "0.0.10"
         }
     }
     buildTypes {
